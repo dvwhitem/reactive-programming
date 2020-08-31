@@ -13,14 +13,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 @EqualsAndHashCode(callSuper = true)
 @Slf4j
 @Data
-public class RxSeeEmitter extends SseEmitter {
+public class RxSseEmitter extends SseEmitter {
 
     private static final long SSE_SESSION_TIMEOUT = 30 * 60 * 1000L;
     private final Subscriber<Temperature> subscriber;
     private final static AtomicInteger sessionIdSequence = new AtomicInteger(0);
     private final int sessionId = sessionIdSequence.incrementAndGet();
 
-    public RxSeeEmitter(Subscriber<Temperature> subscriber) {
+    public RxSseEmitter() {
         super(SSE_SESSION_TIMEOUT);
 
         this.subscriber = new Subscriber<Temperature>() {
@@ -37,7 +37,7 @@ public class RxSeeEmitter extends SseEmitter {
             @Override
             public void onNext(Temperature temperature) {
                 try {
-                    RxSeeEmitter.this.send(temperature);
+                    RxSseEmitter.this.send(temperature);
                     log.info("[{}] << {} ", sessionId, temperature.getValue());
                 } catch (IOException e) {
                     log.warn("[{}] Can not send event to SSE, closing subscription, message: {}",
