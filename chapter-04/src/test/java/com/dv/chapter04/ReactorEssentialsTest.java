@@ -6,8 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Random;
 
 @Slf4j
@@ -43,6 +46,65 @@ public class ReactorEssentialsTest {
                 .repeat()
                 .collectList()
                 .block();
+    }
+
+
+    @Test
+    @Ignore
+    public void createFlux() {
+        Flux.just("Hello", "World").doOnNext(v -> log.info("value: {}", v)).blockLast();
+        Flux.fromArray(new Integer[] {1, 4, 7}).doOnNext(v -> log.info("value: {}", v)).blockLast();
+        Flux.fromIterable(Arrays.asList(12, 43, 54)).doOnNext(v -> log.info("value: {}", v)).blockLast();
+
+        Flux<String> emptyStream = Flux.empty();
+        Flux<Integer> integerFlux = Flux.range(2010, 11);
+        log.info(" {}", integerFlux.collectList().block());
+    }
+
+    @Test
+    public void createMono() {
+
+        Mono<String> stringMono = Mono.fromCallable(() -> httpsRequest());
+        Mono<String> stringMono1 = Mono.fromCallable(this::httpsRequest);
+
+        StepVerifier
+                .create(stringMono1)
+                .expectErrorMessage("IO error")
+                .verify();
+    }
+
+    @Test
+    public void shouldCreateDefer() {
+        Mono<User> userMono = requestUserData(null);
+        StepVerifier.create(userMono)
+                .expectNextCount(0)
+                .expectErrorMessage("Invalid user id")
+                .verify();
+    }
+
+    public Mono<User> requestUserData(String userId) {
+        return Mono.defer(() ->
+                isValid(
+                        userId) ?
+                        Mono.fromCallable(() -> requestUser(userId)) :
+                        Mono.error(new IllegalArgumentException("Invalid user id")));
+    }
+
+    private User requestUser(String id) {
+        return new User();
+    }
+
+    private boolean isValid(String userId) {
+        return userId != null;
+    }
+
+    private String httpsRequest() {
+        log.info("Make HTTP request");
+        throw new RuntimeException("IO error");
+    }
+
+    static class User {
+        public String id, name;
     }
 
 }
