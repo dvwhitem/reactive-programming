@@ -5,6 +5,7 @@ package com.dv.chapter04;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Ignore;
 import org.junit.Test;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -74,6 +75,7 @@ public class ReactorEssentialsTest {
     }
 
     @Test
+    @Ignore
     public void shouldCreateDefer() {
         Mono<User> userMono = requestUserData(null);
         StepVerifier.create(userMono)
@@ -88,6 +90,16 @@ public class ReactorEssentialsTest {
                         userId) ?
                         Mono.fromCallable(() -> requestUser(userId)) :
                         Mono.error(new IllegalArgumentException("Invalid user id")));
+    }
+
+    @Test
+    public void managingSubscruption() throws InterruptedException {
+        Disposable disposable = Flux.interval(Duration.ofMillis(50))
+                .doOnCancel(() -> log.info("Cancelled")).subscribe(
+                        data -> log.info("onNext: {}", data)
+                );
+        Thread.sleep(300);
+        disposable.dispose();
     }
 
     private User requestUser(String id) {
