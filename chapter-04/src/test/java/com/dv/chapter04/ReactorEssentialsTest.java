@@ -8,6 +8,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuples;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -244,7 +245,7 @@ public class ReactorEssentialsTest {
 
     @Test
     @Ignore
-    public void  sampleExample() throws InterruptedException {
+    public void sampleExample() throws InterruptedException {
         Flux.range(1, 100)
                 .delayElements(Duration.ofMillis(1))
                 .sample(Duration.ofMillis(20))
@@ -256,13 +257,14 @@ public class ReactorEssentialsTest {
     @Test
     @Ignore
     public void doOnNextExample() {
-        Flux.just(1,2,3)
+        Flux.just(1, 2, 3)
                 .concatWith(Flux.error(new RuntimeException("Conn error")))
                 .doOnEach(s -> log.info("signal: {}", s))
                 .subscribe();
     }
 
     @Test
+    @Ignore
     public void signalProcessing() {
         Flux.range(1, 3)
                 .doOnNext(e -> log.info("data: {}", e))
@@ -271,6 +273,44 @@ public class ReactorEssentialsTest {
                 .dematerialize()
                 .collectList()
                 .subscribe(e -> log.info("result: {}", e));
+    }
+
+    @Test
+    @Ignore
+    public void usingPushOperator() {
+        Flux
+                .push(emitter -> IntStream.range(2000, 200000).forEach(emitter::next))
+                .delayElements(Duration.ofMillis(3))
+                .subscribe(el -> log.info("onNext: {}", el));
+    }
+
+    @Test
+    @Ignore
+    public void usingCreateOperator() throws InterruptedException {
+        Flux.create(emitter -> {
+            emitter.onDispose(() -> log.info("Disposed"));
+            // push events to emitter
+        })
+                .subscribe(e -> log.info("onNext: {}", e));
+
+        Thread.sleep(1000);
+    }
+
+
+    @Test
+    public void usingGenerate() throws InterruptedException {
+        Flux.generate(
+                () -> Tuples.of(0L, 1L),
+                (state, sink) -> {
+                    log.info("generated value: {}", state.getT2());
+                    sink.next(state.getT2());
+                    long newValue = state.getT1() + state.getT2();
+                    return Tuples.of(state.getT2(), newValue);
+                })
+                .take(7)
+                .subscribe(e -> log.info("onNext: {}", e));
+
+        Thread.sleep(100);
     }
 
     private Flux<String> requestBooks(String user) {
