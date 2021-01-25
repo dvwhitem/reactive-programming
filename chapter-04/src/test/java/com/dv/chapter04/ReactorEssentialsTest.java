@@ -298,6 +298,7 @@ public class ReactorEssentialsTest {
 
 
     @Test
+    @Ignore
     public void usingGenerate() throws InterruptedException {
         Flux.generate(
                 () -> Tuples.of(0L, 1L),
@@ -311,6 +312,33 @@ public class ReactorEssentialsTest {
                 .subscribe(e -> log.info("onNext: {}", e));
 
         Thread.sleep(100);
+    }
+
+    @Test
+    @Ignore
+    public void tryWithResource() {
+        try(Connection connection = Connection.newConnection()) {
+            connection.getData().forEach(
+                    data -> log.info("Received data: {}", data)
+            );
+        } catch (Exception e) {
+            log.info("Error: {}", e.getMessage());
+        }
+    }
+
+    @Test
+    public void usingOperator() {
+        Flux<String> ioRequestResult = Flux.using(
+                Connection::newConnection,
+                connection -> Flux.fromIterable(connection.getData()),
+                Connection::close
+        );
+
+        ioRequestResult.subscribe(
+                data -> log.info("ReceivedData data: {}", data),
+                e -> log.info("Error Message: {}", e.getMessage()),
+                () -> log.info("Stream finished")
+        );
     }
 
     private Flux<String> requestBooks(String user) {
@@ -341,6 +369,28 @@ public class ReactorEssentialsTest {
 
     static class User {
         public String id, name;
+    }
+
+    static class Connection implements AutoCloseable {
+
+        private final Random random = new Random();
+
+        static Connection newConnection() {
+            log.info("IO Connection created");
+            return new Connection();
+        }
+
+        public Iterable<String> getData() {
+            if(random.nextInt(10) < 3) {
+                throw new RuntimeException("Communication error");
+            }
+            return Arrays.asList("Some", "Data");
+        }
+
+        @Override
+        public void close() {
+            log.info("IO Connection closed");
+        }
     }
 
 }
