@@ -4,6 +4,7 @@ package com.dv.chapter04;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -316,7 +317,7 @@ public class ReactorEssentialsTest {
     @Test
     @Ignore
     public void tryWithResource() {
-        try(Connection connection = Connection.newConnection()) {
+        try (Connection connection = Connection.newConnection()) {
             connection.getData().forEach(
                     data -> log.info("Received data: {}", data)
             );
@@ -326,6 +327,7 @@ public class ReactorEssentialsTest {
     }
 
     @Test
+    @Ignore
     public void usingOperator() {
         Flux<String> ioRequestResult = Flux.using(
                 Connection::newConnection,
@@ -339,6 +341,31 @@ public class ReactorEssentialsTest {
                 () -> log.info("Stream finished")
         );
     }
+
+    @Test
+    @Ignore
+    public void testRandom() {
+        log.info("Random number is {} /infinity/", random.nextInt());
+        log.info("Random number is {} /10/ ", random.nextInt(10));
+        log.info("Random number is {} /1000/ ", random.nextInt(1000));
+    }
+
+//    @Test
+//    @Ignore
+//    public void usingWhenExample() throws InterruptedException {
+//        Flux.usingWhen(
+//                Transaction.beginTransaction(),
+//                transaction -> transaction.insertRows(Flux.just("A", "B")),
+//                Transaction::commit,
+//                Transaction::rollback
+//        ).subscribe(
+//                d -> log.info("onNext: {}", d),
+//                e -> log.info("onError: {}", e.getMessage()),
+//                () -> log.info("onComplete")
+//        );
+//
+//        Thread.sleep(1000);
+//    }
 
     private Flux<String> requestBooks(String user) {
         return Flux.range(1, random.nextInt(3) + 1)
@@ -380,7 +407,7 @@ public class ReactorEssentialsTest {
         }
 
         public Iterable<String> getData() {
-            if(random.nextInt(10) < 3) {
+            if (random.nextInt(10) < 3) {
                 throw new RuntimeException("Communication error");
             }
             return Arrays.asList("Some", "Data");
@@ -389,6 +416,56 @@ public class ReactorEssentialsTest {
         @Override
         public void close() {
             log.info("IO Connection closed");
+        }
+    }
+
+    static class Transaction {
+        private static final Random random = new Random();
+        private final int id;
+
+        public Transaction(int id) {
+            this.id = id;
+            log.info("[T: {}] created", id);
+        }
+
+        public static Mono<Transaction> beginTransaction() {
+            return Mono.defer(() ->
+                    Mono.just(new Transaction(random.nextInt(1000))));
+        }
+
+        public Flux<String> insertRows(Publisher<String> rows) {
+            return Flux.from(rows)
+                    .delayElements(Duration.ofMillis(100))
+                    .flatMap(row -> {
+                        if (random.nextInt(10) < 2) {
+                            return Mono.error(new RuntimeException("Error on: " + row));
+                        } else {
+                            return Mono.just(row);
+                        }
+                    });
+        }
+
+
+        public Mono<Void> commit() {
+            return Mono.defer(() -> {
+                log.info("[T: {}] commit", id);
+                if (random.nextBoolean()) {
+                    return Mono.empty();
+                } else {
+                    return Mono.error(new RuntimeException("Conflict"));
+                }
+            });
+        }
+
+        public Mono<Void> rollback() {
+            return Mono.defer(() -> {
+                log.info("[T: {}] rollback", id);
+                if (random.nextBoolean()) {
+                    return Mono.empty();
+                } else {
+                    return Mono.error(new RuntimeException("Conn error"));
+                }
+            });
         }
     }
 
