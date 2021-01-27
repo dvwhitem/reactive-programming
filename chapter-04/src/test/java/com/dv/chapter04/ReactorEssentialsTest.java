@@ -367,6 +367,32 @@ public class ReactorEssentialsTest {
 //        Thread.sleep(1000);
 //    }
 
+    @Test
+   public void managingDemand() {
+        Flux.range(1, 100)
+                .subscribe(
+                        data -> log.info("On Next: {}", data),
+                        err -> { /* ignore */ },
+                        () -> log.info("On Complete"),
+                        subscription -> {
+                            subscription.request(4);
+                            subscription.cancel();
+                        }
+                );
+   }
+
+    public Flux<String> recomendedBook(String userId) {
+        return Flux.defer(() -> {
+            if(random.nextInt(10) < 7) {
+                return Flux.<String>error(new RuntimeException("Conn error"))
+                        .delaySequence(Duration.ofMillis(100));
+            } else {
+                return Flux.just("Blue Mars", "the Expanse")
+                        .delayElements(Duration.ofMillis(50));
+            }
+        }).doOnSubscribe(s -> log.info("Request for {}", userId));
+    }
+
     private Flux<String> requestBooks(String user) {
         return Flux.range(1, random.nextInt(3) + 1)
                 .map(i -> "book-" + i)
