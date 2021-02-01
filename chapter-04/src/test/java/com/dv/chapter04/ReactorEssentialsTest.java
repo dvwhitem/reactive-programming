@@ -368,6 +368,7 @@ public class ReactorEssentialsTest {
 //    }
 
     @Test
+    @Ignore
    public void managingDemand() {
         Flux.range(1, 100)
                 .subscribe(
@@ -381,13 +382,29 @@ public class ReactorEssentialsTest {
                 );
    }
 
-    public Flux<String> recomendedBook(String userId) {
+   @Test
+   public void handlingErrors() throws InterruptedException {
+        Flux.just("user-1")
+                .flatMap(
+                        user -> recommendedBooks(user)
+                                .retry(5)
+                                .timeout(Duration.ofSeconds(3))
+                                .onErrorResume(e -> Flux.just("The Martian"))
+                ).subscribe(
+                b -> log.info("onNext: {}", b),
+                e -> log.warn("onError: {}", e.getMessage()),
+                () -> log.info("onComplete !")
+        );
+        Thread.sleep(5000);
+   }
+
+    public Flux<String> recommendedBooks(String userId) {
         return Flux.defer(() -> {
-            if(random.nextInt(10) < 7) {
+            if (random.nextInt(10) < 7) {
                 return Flux.<String>error(new RuntimeException("Conn error"))
                         .delaySequence(Duration.ofMillis(100));
             } else {
-                return Flux.just("Blue Mars", "the Expanse")
+                return Flux.just("Blue Mars", "The Expanse")
                         .delayElements(Duration.ofMillis(50));
             }
         }).doOnSubscribe(s -> log.info("Request for {}", userId));
