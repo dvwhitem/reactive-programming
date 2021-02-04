@@ -6,14 +6,17 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
+import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 @Slf4j
@@ -383,6 +386,7 @@ public class ReactorEssentialsTest {
    }
 
    @Test
+   @Ignore
    public void handlingErrors() throws InterruptedException {
         Flux.just("user-1")
                 .flatMap(
@@ -397,6 +401,121 @@ public class ReactorEssentialsTest {
         );
         Thread.sleep(5000);
    }
+
+   @Test
+   @Ignore
+   public void coldPublisher() {
+        Flux<String> coldPublisher = Flux.defer(() -> {
+            log.info("Generating new items");
+            return Flux.just(UUID.randomUUID().toString());
+        });
+        log.info("No data was generated so far");
+        coldPublisher.subscribe(e -> log.info("onNext: {}", e));
+        coldPublisher.subscribe(e -> log.info("onNext: {}", e));
+        log.info("Data was generated twice for two subscribers");
+   }
+
+   @Test
+   @Ignore
+   public void exampleRangeFlux() {
+
+        Flux<Integer> range = Flux.range(0, 3)
+                .doOnSubscribe(s -> log.info("new subscription"));
+
+        range.subscribe(e -> log.info("[Subscriber 1] onNext: {}", e));
+        range.subscribe(e -> log.info("[Subscriber 2] onNext: {}", e));
+
+       log.info("all subscribers are ready");
+   }
+
+   @Test
+   @Ignore
+    public void connectExample() {
+        Flux<Integer> source = Flux.range(0, 3)
+                .doOnSubscribe(subscription -> log.info("new subscription for the cold publisher"));
+
+       ConnectableFlux<Integer> connectableFlux = source.publish();
+       connectableFlux.subscribe(e -> log.info("[Subscriber 1] onNext: {}", e));
+       connectableFlux.subscribe(e -> log.info("[Subscriber 2] onNext: {}", e));
+
+       log.info("all subscribers are ready, connecting");
+       connectableFlux.connect();
+     }
+
+     @Test
+     @Ignore
+    public void cachingExample() throws InterruptedException {
+        Flux<Integer> source = Flux.range(0, 2)
+                .doOnSubscribe(l -> log.info("new subscription for the cold publisher"));
+
+        Flux<Integer> cachingSource = source.cache(Duration.ofSeconds(1));
+
+        cachingSource.subscribe(e -> log.info("[S 1] onNext: {}", e));
+        cachingSource.subscribe(e -> log.info("[S 2] onNext: {}", e));
+
+        Thread.sleep(5000);
+        cachingSource.subscribe(e -> log.info("[S 3] onNext: {}", e));
+    }
+
+    @Test
+    @Ignore
+    public void relayExample() throws InterruptedException {
+
+        Flux<Integer> source = Flux.range(0, 5)
+                .delayElements(Duration.ofMillis(100))
+                .doOnSubscribe(l -> log.info("new subscription for the cold publisher"));
+
+        Flux<Integer> cacheSource = source.share();
+        cacheSource.subscribe(e -> log.info("[S 1] onNext: {}", e));
+        Thread.sleep(400);
+        cacheSource.subscribe(e -> log.info("[S 2] onNext: {}", e));
+        Thread.sleep(1000);
+    }
+
+    @Test
+    @Ignore
+    public void elapsedExample() throws InterruptedException {
+        Flux.range(0, 5)
+                .delayElements(Duration.ofMillis(100))
+                .elapsed()
+                .subscribe(e -> log.info("Elapsed {} ms: {}", e.getT1(), e.getT2()));
+
+        Thread.sleep(1000);
+    }
+
+    @Test
+    @Ignore
+    public void transformExample() {
+        Function<Flux<String>, Flux<String>> logUserInfo =
+                stream -> stream
+                        .index()
+                        .doOnNext(tp -> log.info("[{}] User: {}", tp.getT1(), tp.getT2()))
+                        .map(Tuple2::getT2);
+
+        Flux
+                .range(2000, 3)
+                .map(i -> "user-" +i)
+                .transform(logUserInfo)
+                .subscribe(e -> log.info("onNext: {}", e));
+    }
+
+    @Test
+    public void composeExample() {
+        Function<Flux<String>, Flux<String>> logUserInfo =
+                stringFlux -> {
+                    if(random.nextBoolean()) {
+                        return stringFlux.doOnNext(e -> log.info("[path A}] User {}", e));
+                    } else {
+                        return stringFlux.doOnNext(e -> log.info("[path B}] User {}", e));
+                    }
+                };
+
+        // compose doesn't work
+        Flux<String> publisher = Flux.just("1", "2").transform(logUserInfo);
+        publisher.subscribe();
+        publisher.subscribe();
+    }
+
 
     public Flux<String> recommendedBooks(String userId) {
         return Flux.defer(() -> {
