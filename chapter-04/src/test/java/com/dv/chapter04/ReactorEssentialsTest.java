@@ -500,6 +500,7 @@ public class ReactorEssentialsTest {
     }
 
     @Test
+    @Ignore
     public void composeExample() {
         Function<Flux<String>, Flux<String>> logUserInfo =
                 stringFlux -> {
