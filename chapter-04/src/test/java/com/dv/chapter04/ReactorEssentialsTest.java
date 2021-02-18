@@ -9,6 +9,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
@@ -515,6 +516,16 @@ public class ReactorEssentialsTest {
         Flux<String> publisher = Flux.just("1", "2").transform(logUserInfo);
         publisher.subscribe();
         publisher.subscribe();
+    }
+
+    @Test
+    public void parallelExample() {
+        Flux.range(0, 100)
+                .parallel()
+                .runOn(Schedulers.parallel())
+                .map(el -> el)
+                .filter(el -> el.equals(el < 10))
+                .subscribe();
     }
 
 
