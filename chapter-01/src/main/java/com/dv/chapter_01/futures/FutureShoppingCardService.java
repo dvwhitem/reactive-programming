@@ -10,7 +10,7 @@ public class FutureShoppingCardService implements ShoppingCardService {
     @Override
     public Future<Output> calculate(Input in) {
         FutureTask<Output> future = new FutureTask<>(() -> {
-            Thread.sleep(1000);
+            Thread.sleep(10000);
             return new Output();
         });
         new Thread(future).start();
