@@ -34,6 +34,5 @@ public class ObserverTest {
         Mockito.verify(observerB, Mockito.times(1)).observe("Message for B");
         Mockito.verify(observerB, Mockito.times(1)).observe("Message for A & B");
         Mockito.verifyNoMoreInteractions(observerA);
-
     }
 }
