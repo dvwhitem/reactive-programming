@@ -12,5 +12,6 @@
         <module>chapter-01</module>
         <module>chapter-02</module>
         <module>chapter-04</module>
+        <module>reactor/reactor-letscode-example</module>
     </modules>
 </project>
