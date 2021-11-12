@@ -45,20 +45,40 @@ public class FluxReactorTest {
 
     @Test
     public void shouldCreateDefer() {
+        Mono<User> userMono = requestDeferUserData(null).log();
+        StepVerifier.create(userMono)
+                .expectSubscription()
+                .expectNextCount(0)
+                .expectErrorMessage("Invalid user id")
+                .verify();
+    }
+
+    @Test
+    public void shouldCreateUser() {
         Mono<User> userMono = requestUserData(null).log();
         StepVerifier.create(userMono)
+                .expectSubscription()
                 .expectNextCount(0)
                 .expectErrorMessage("Invalid user id")
                 .verify();
     }
 
 
-    public Mono<User> requestUserData(String userId) {
+    public Mono<User> requestDeferUserData(String userId) {
+        log.info("call method with defer");
         return Mono.defer(() -> isValid(userId)
                 ? Mono.fromCallable(() -> requestUser(userId))
                 : Mono.error(new IllegalArgumentException("Invalid user id"))
                 );
     }
+
+    public Mono<User> requestUserData(String userId) {
+        log.info("call method");
+        return isValid(userId)
+                ? Mono.fromCallable(() -> requestUser(userId))
+                : Mono.error(new IllegalArgumentException("Invalid user id"));
+    }
+
 
     private String httpRequest() {
         log.info("Making HTTP request");
