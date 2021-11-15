@@ -40,12 +40,12 @@ public class FluxExamples {
     @Test
     public void fluxDisposable() throws InterruptedException {
 
-        var flux = Flux.interval(Duration.ofMillis(50))
+        var flux = Flux.interval(Duration.ofMillis(10))
                 .subscribe((data) -> log.info("Data:  {}", data));
 
         Thread.sleep(200);
         flux.dispose();
-
     }
+
 
 }
