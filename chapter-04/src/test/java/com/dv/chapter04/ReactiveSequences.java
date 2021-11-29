@@ -26,5 +26,27 @@ public class ReactiveSequences {
                 .subscribe(e -> log.info("Elements: {}", e));
     }
 
+    @Test
+    public void fluxSequencesPredicateAny() {
+        Flux.just("Spring", "Spring Cloud", "Spring Boot", "WebFlux")
+                .any(m -> m.equalsIgnoreCase("spring"))
+                .subscribe(e -> log.info("Any element {}", e));
+    }
+
+    @Test
+    public void fluxRangeAndReduce() {
+            Flux
+                    .range(1, 5)
+                    .reduce(0, (e,a) -> e + a)
+                    .subscribe(e -> log.info("Element e {}", e));
+    }
+
+    @Test
+    public void fluxScan() {
+        Flux.range(1,5)
+                .scan(0, (a, e) -> a + e)
+                .subscribe(m -> log.info("Element: {}", m));
+    }
+
 
 }
