@@ -48,5 +48,13 @@ public class ReactiveSequences {
                 .subscribe(m -> log.info("Element: {}", m));
     }
 
+    @Test
+    public void fluxThenMany() {
+        Flux.just(1,2,3,4,5,6,7,8)
+                .skipUntil(el -> el == 7)
+                .thenMany(Flux.range(1,6))
+                .subscribe(m -> log.info("Element {}", m));
+    }
+
 
 }
